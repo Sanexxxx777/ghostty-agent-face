@@ -5,7 +5,7 @@
 //
 // v4  adds: (1) pupils track the terminal cursor (iCurrentCursor, Ghostty >=1.1),
 //           (2) night fade 23:00-07:00 via iDate.w, (3) SLEEP state, (4) HELPERS state.
-// v4.1 adds:(5) IDLE/SLEEP aquarium — 4 stateless ASCII fish drifting over the field.
+// v4.1 adds:(5) SLEEP aquarium — fish/seaweed/crab/turtle appear when the face falls asleep.
 // Uniforms iCurrentCursor / iDate are Ghostty built-ins — NEVER declare them here.
 
 // BASE_BG MUST equal your real Ghostty background-color (default #282c34).
@@ -316,8 +316,8 @@ void mainImage(out vec4 fragColor, in vec2 fragCoord){
     float field = max(max(eyeLv, eyeRv), max(mouthV, max(qv, max(xv, max(dots, max(zv, sat))))));
     field = clamp(field, 0.0, 1.0);
 
-    // ---------- 4b. IDLE/SLEEP aquarium: 4 ASCII fish (stateless Lissajous wander) ----------
-    float aq   = clamp(wIdle + wSleep, 0.0, 1.0);                       // free crossfade: 0 on any signal
+    // ---------- 4b. SLEEP aquarium: 4 ASCII fish (stateless Lissajous wander) ----------
+    float aq   = wSleep;                              // aquarium lives ONLY in SLEEP (crossfades with the weight)
     vec2  fp    = vec2(cc.x, R.y - cc.y) / R.y;                         // screen space, Y-up, isotropic
     vec2  curFp = vec2(iCurrentCursor.x, R.y - iCurrentCursor.y) / R.y; // cursor in the same space
     float tN = iTime;          // near fish
@@ -357,8 +357,7 @@ void mainImage(out vec4 fragColor, in vec2 fragCoord){
     float fwsum = cov1 + cov2 + cov3 + cov4 + weedA + weedB + crab + turt + 1e-4;
     vec3  fishCol = (fc1*cov1 + fc2*cov2 + fc3*cov3 + fc4*cov4
                    + weedAC*weedA + weedBC*weedB + crabC*crab + turtC*turt) / fwsum;
-    float sleepFrac = wSleep / (aq + eps);
-    fishCol = mix(fishCol, cSleep, sleepFrac * 0.6);                    // SLEEP: dimmer/cooler
+    fishCol = mix(fishCol, cSleep, 0.25);                               // night tint, hues stay visible
 
     // bubbles: rare columns, dot cells rising (wrap by y), fading in the top third
     float colH   = hash21(vec2(cid.x, 3.0));

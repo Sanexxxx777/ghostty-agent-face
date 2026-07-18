@@ -6,14 +6,14 @@ A living ASCII face on your [Ghostty](https://ghostty.org) terminal background t
 
 | State | Trigger | Face |
 |---|---|---|
-| 😐 **Idle** | no signal | dim blue half-closed eyes, occasional blink — plus an **aquarium**: 4 ASCII fish wander the background |
+| 😐 **Idle** | no signal | dim blue half-closed eyes, occasional blink, slow look-around |
 | 🤔 **Thinking** | you submit a prompt | amber round eyes, pupils on the move, bobbing **?** |
 | ⚙️ **Working** | agent runs a tool | gold narrowed eyes looking down at the "keyboard", typing jitter, running **…** |
 | 🐣 **Helpers** | agent spawns subagents | working face plus two pairs of small satellite eyes swaying in antiphase |
 | 😊 **Done** | agent finishes the turn | green happy arc-eyes `^ ^`, wide smile, drifting fireflies |
 | 😮 **Needs you** | agent waits for approval | orange wide eyes, mouth **o**, pulsing **!** |
 | 😵 **Dizzy** | context compaction | purple spinner eyes `@ @` (counter-rotating), wavy mouth |
-| 😴 **Sleep** | 30 min of unread "done" | closed dash-eyes, slow breathing, three **Z** drifting away, fish keep it company |
+| 😴 **Sleep** | 30 min of unread "done" | closed dash-eyes, slow breathing, three **Z** — and the **aquarium wakes up**: 4 hued fish, seaweed, a crab patrolling the bottom, a sleeping turtle |
 
 And it is genuinely alive:
 
@@ -85,7 +85,7 @@ printf '\033]11;#282C36\033\\'   # done (green, smile)
 printf '\033]11;#2A2E34\033\\'   # needs you (orange, "!")
 printf '\033]11;#2A2C36\033\\'   # dizzy (purple spinners)
 printf '\033]11;#282E36\033\\'   # sleep (z z z + fish)
-printf '\033]111\033\\'          # reset -> idle (aquarium)
+printf '\033]111\033\\'          # reset -> idle
 ```
 
 The signal colors are deliberately near-identical to the theme background (`+2/255` on one or two channels): the background **never visibly changes**, with or without the shader — the signal is a color delta the eye cannot see.
