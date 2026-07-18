@@ -67,13 +67,15 @@ Any other agent works the same way — call `agent-face.sh run|done|attn|reset` 
 ## Try it without an agent
 
 ```sh
-printf '\033]11;#332308\033\\'   # thinking (amber, "?")
-printf '\033]11;#0A2E33\033\\'   # working (gold, "...")
-printf '\033]11;#0A331A\033\\'   # done (green, smile)
-printf '\033]11;#33110A\033\\'   # needs you (orange, "!")
-printf '\033]11;#2E0833\033\\'   # dizzy (purple spinners)
+printf '\033]11;#2D2C34\033\\'   # thinking (amber, "?")
+printf '\033]11;#283134\033\\'   # working (gold, "...")
+printf '\033]11;#282C39\033\\'   # done (green, smile)
+printf '\033]11;#2D3134\033\\'   # needs you (orange, "!")
+printf '\033]11;#2D2C39\033\\'   # dizzy (purple spinners)
 printf '\033]111\033\\'          # reset -> idle
 ```
+
+The signal colors are deliberately near-identical to the theme background (`+5/255` on one or two channels): the background **never visibly changes**, with or without the shader — the signal is a color delta the eye cannot see.
 
 ## Tuning
 
@@ -92,8 +94,8 @@ Signal colors live at the top of `agent-face.sh` and in the classifier threshold
 ## Notes & gotchas
 
 - Ghostty's GLSL→Metal chain **silently drops** shaders that fail to compile. If you edit the shader and the face disappears, simplify your change — there is no error message.
-- If your theme background differs from `#282c34`, update `BASE_BG` or the repaint will be visible.
-- On terminals other than Ghostty the shader layer does nothing, but OSC 11 signals still work as flat status tints (kill switch: `touch ~/.claude/hooks/agent-face.disabled`).
+- If your theme background differs from `#282c34`: update `BASE_BG` in the shader **and** recompute the hook colors as `background + 5` on the corresponding channels (R=thinking, G=working, B=done, RG=needs-you, RB=dizzy).
+- On terminals other than Ghostty the shader does nothing and the signals are invisible by design — nothing to clean up. Kill switch: `touch ~/.claude/hooks/agent-face.disabled`.
 
 ## Credits
 

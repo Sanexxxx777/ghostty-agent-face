@@ -7,11 +7,13 @@
 # Включить обратно: удалить файл ~/.claude/hooks/agent-face.disabled
 [ -e "$HOME/.claude/hooks/agent-face.disabled" ] && exit 0
 
-COLOR_RUN="#332308"
-COLOR_DONE="#0A331A"
-COLOR_ATTN="#33110A"
-COLOR_WORK="#0A2E33"
-COLOR_DIZZY="#2E0833"
+# Сигналы = НЕВИДИМЫЕ сдвиги +5/255 от фона темы #282c34 (40,44,52).
+# Глаз разницу не видит ни при каких обстоятельствах, шейдер отличает точно.
+COLOR_RUN="#2D2C34"
+COLOR_DONE="#282C39"
+COLOR_ATTN="#2D3134"
+COLOR_WORK="#283134"
+COLOR_DIZZY="#2D2C39"
 
 find_tty() {
     local pid="$1"

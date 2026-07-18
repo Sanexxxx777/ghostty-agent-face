@@ -23,21 +23,16 @@ void mainImage(out vec4 fragColor, in vec2 fragCoord){
     vec3 c3 = texture(iChannel0, vec2(0.97, 0.97)).rgb;
     vec3 bg = darker(darker(c0, c1), darker(c2, c3));
 
-    // ---------- 2. classify by channel RATIOS (branchless one-hot) ----------
+    // ---------- 2. classify: signals are INVISIBLE +5/255 offsets from BASE_BG ----------
+    // The background never visibly changes, shader or no shader: the signal is a
+    // color delta the eye cannot see, matched here by exact distance.
     float eps  = 0.001;
-    float sum  = bg.r + bg.g + bg.b + eps;
-    float rn   = bg.r / sum;              // red fraction
-    float gn   = bg.g / sum;              // green fraction
-    float bn   = bg.b / sum;              // blue fraction (small for RUN/ATTN, big for neutral themes)
-    float rg   = bg.r / (bg.g + eps);     // red / green
-    float gb   = bg.g / (bg.b + eps);     // green / blue
-
-    float blueSmall = 1.0 - smoothstep(0.14, 0.24, bn);
-    float wDone  = smoothstep(0.42, 0.52, gn) * smoothstep(1.15, 1.5, gb);
-    float wAttn  = smoothstep(2.0, 2.6, rg) * blueSmall * (1.0 - wDone);
-    float wRun   = smoothstep(1.2, 1.4, rg) * (1.0 - smoothstep(2.0, 2.6, rg)) * blueSmall * (1.0 - wDone);
-    float wWork  = (1.0 - smoothstep(0.09, 0.14, rn)) * smoothstep(0.36, 0.44, bn) * (1.0 - wDone); // cyan signal
-    float wDizzy = (1.0 - smoothstep(0.10, 0.15, gn)) * smoothstep(0.40, 0.46, bn);                 // purple signal
+    float u5   = 5.0 / 255.0;
+    float wRun   = 1.0 - smoothstep(0.006, 0.012, distance(bg, BASE_BG + vec3(u5, 0.0, 0.0)));
+    float wWork  = 1.0 - smoothstep(0.006, 0.012, distance(bg, BASE_BG + vec3(0.0, u5, 0.0)));
+    float wDone  = 1.0 - smoothstep(0.006, 0.012, distance(bg, BASE_BG + vec3(0.0, 0.0, u5)));
+    float wAttn  = 1.0 - smoothstep(0.006, 0.012, distance(bg, BASE_BG + vec3(u5, u5, 0.0)));
+    float wDizzy = 1.0 - smoothstep(0.006, 0.012, distance(bg, BASE_BG + vec3(u5, 0.0, u5)));
     float wIdle = clamp(1.0 - wRun - wDone - wAttn - wWork - wDizzy, 0.0, 1.0);
     float wsum  = wIdle + wRun + wDone + wAttn + wWork + wDizzy + eps;
     wIdle /= wsum; wRun /= wsum; wDone /= wsum; wAttn /= wsum; wWork /= wsum; wDizzy /= wsum;
