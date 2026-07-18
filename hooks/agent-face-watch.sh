@@ -32,7 +32,7 @@ while [ "$tick" -lt "$max_ticks" ]; do
         now=$(date +%s)
         elapsed=$((now - start_ts))
         if [ "$elapsed" -ge 1800 ]; then
-            printf '\033]11;#283139\007' > "$tty" 2>/dev/null
+            printf '\033]11;#282E36\007' > "$tty" 2>/dev/null
             state="sleep"
         fi
     fi

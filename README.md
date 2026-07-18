@@ -2,6 +2,8 @@
 
 A living ASCII face on your [Ghostty](https://ghostty.org) terminal background that shows your AI agent's status at a glance — no tokens, no daemons, no polling.
 
+**[▶ Watch the 30-second demo with sound](https://github.com/Sanexxxx777/ghostty-agent-face/releases/download/v1.0/demo.mp4)**
+
 | State | Trigger | Face |
 |---|---|---|
 | 😐 **Idle** | no signal | dim blue half-closed eyes, occasional blink — plus an **aquarium**: 4 ASCII fish wander the background |
@@ -27,7 +29,7 @@ The face is drawn as an ASCII-style cell grid (mini-glyphs `0` / block / dot), g
 Two decoupled layers; the terminal background color itself is the IPC channel:
 
 1. **Signal layer** — agent lifecycle hooks call `hooks/agent-face.sh`, which writes an OSC 11 "signal color" to the session's tty (found by walking the hook process's parent chain — hook processes have no controlling tty). Pure shell.
-2. **Render layer** — `shaders/agent-face.glsl`, a Ghostty custom shader, samples the background from the window corners, classifies the signal by **channel ratios** (robust to brightness changes), repaints background pixels back to your normal theme color, and draws the matching face on top.
+2. **Render layer** — `shaders/agent-face.glsl`, a Ghostty custom shader, samples the background from the window corners, classifies the signal by **exact color distance** to the known offsets, repaints background pixels back to your normal theme color, and draws the matching face on top.
 
 So the visible background never changes — the signal color is an invisible carrier. Without the shader you'd just get a slightly tinted background; without the hooks the face sits calmly in idle.
 
@@ -76,17 +78,17 @@ Any other agent works the same way — call `agent-face.sh run|done|attn|work|he
 ## Try it without an agent
 
 ```sh
-printf '\033]11;#2D2C34\033\\'   # thinking (amber, "?")
-printf '\033]11;#283134\033\\'   # working (gold, "...")
-printf '\033]11;#2D3139\033\\'   # helpers (satellite eyes)
-printf '\033]11;#282C39\033\\'   # done (green, smile)
-printf '\033]11;#2D3134\033\\'   # needs you (orange, "!")
-printf '\033]11;#2D2C39\033\\'   # dizzy (purple spinners)
-printf '\033]11;#283139\033\\'   # sleep (z z z + fish)
+printf '\033]11;#2A2C34\033\\'   # thinking (amber, "?")
+printf '\033]11;#282E34\033\\'   # working (gold, "...")
+printf '\033]11;#2A2E36\033\\'   # helpers (satellite eyes)
+printf '\033]11;#282C36\033\\'   # done (green, smile)
+printf '\033]11;#2A2E34\033\\'   # needs you (orange, "!")
+printf '\033]11;#2A2C36\033\\'   # dizzy (purple spinners)
+printf '\033]11;#282E36\033\\'   # sleep (z z z + fish)
 printf '\033]111\033\\'          # reset -> idle (aquarium)
 ```
 
-The signal colors are deliberately near-identical to the theme background (`+5/255` on one or two channels): the background **never visibly changes**, with or without the shader — the signal is a color delta the eye cannot see.
+The signal colors are deliberately near-identical to the theme background (`+2/255` on one or two channels): the background **never visibly changes**, with or without the shader — the signal is a color delta the eye cannot see.
 
 ## Tuning
 
@@ -105,7 +107,7 @@ Signal colors live at the top of `agent-face.sh` and in the classifier threshold
 ## Notes & gotchas
 
 - Ghostty's GLSL→Metal chain **silently drops** shaders that fail to compile. If you edit the shader and the face disappears, simplify your change — there is no error message.
-- If your theme background differs from `#282c34`: update `BASE_BG` in the shader **and** recompute the hook colors as `background + 5` on the corresponding channels (R=thinking, G=working, B=done, RG=needs-you, RB=dizzy).
+- If your theme background differs from `#282c34`: update `BASE_BG` in the shader **and** recompute the hook colors as `background + 2` on the corresponding channels (R=thinking, G=working, B=done, RG=needs-you, RB=dizzy).
 - On terminals other than Ghostty the shader does nothing and the signals are invisible by design — nothing to clean up. Kill switch: `touch ~/.claude/hooks/agent-face.disabled`.
 
 ## Credits

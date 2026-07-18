@@ -66,13 +66,44 @@ float fishCov(vec2 fp, vec2 center, vec4 amp, vec4 frq, vec4 pha, float t, float
 }
 
 // Seaweed strand growing from the bottom edge (fp is Y-up): swaying tapered ribbon.
-float weedCov(vec2 fp, float xb, float h, float ph, float t){
+// w = base width, leaf = 0 plain ribbon / 1 leafy scalloped edge (slower sway).
+float weedCov(vec2 fp, float xb, float h, float ph, float t, float w, float leaf){
     float yr = clamp(fp.y / h, 0.0, 1.0);
-    float sway = (0.012 + 0.038 * yr * yr) * sin(t * 0.8 + ph + yr * 3.0);
+    float sway = (0.012 + 0.038 * yr * yr) * sin(t * (0.6 + 0.3 * leaf) + ph + yr * 3.0);
     float xc = xb + sway;
-    float hw = 0.011 * (1.0 - 0.55 * yr);
+    float hw = w * (1.0 - 0.55 * yr) * (1.0 + 0.45 * leaf * sin(yr * 16.0 + ph * 5.0));
     float band = 1.0 - smoothstep(hw * 0.6, hw + 0.003, abs(fp.x - xc));
     return band * step(fp.y, h);
+}
+
+// Crab patrolling the bottom edge, sideways, ping-pong between xmin..xmax.
+float crabCov(vec2 fp, float t, float xmin, float xmax){
+    float ph  = fract(t * 0.016);
+    float tri = 1.0 - abs(ph * 2.0 - 1.0);
+    float cx  = mix(xmin, xmax, tri);
+    float cy  = 0.030 + 0.004 * abs(sin(t * 5.0));
+    vec2  p   = fp - vec2(cx, cy);
+    float body = 1.0 - smoothstep(0.85, 1.10, length(vec2(p.x / 0.040, p.y / 0.020)));
+    float eyeA = 1.0 - smoothstep(0.004, 0.008, length(p - vec2(-0.012, 0.024)));
+    float eyeB = 1.0 - smoothstep(0.004, 0.008, length(p - vec2( 0.012, 0.024)));
+    float clwA = 1.0 - smoothstep(0.007, 0.012, length(p - vec2(-0.048, 0.010)));
+    float clwB = 1.0 - smoothstep(0.007, 0.012, length(p - vec2( 0.048, 0.010)));
+    float legs = (1.0 - smoothstep(0.030, 0.046, abs(p.x)))
+               * (1.0 - smoothstep(0.006, 0.012, abs(p.y + 0.022 + 0.004 * sin(t * 9.0 + sign(p.x) * 1.5))));
+    return max(body, max(max(eyeA, eyeB), max(max(clwA, clwB), legs)));
+}
+
+// Sleeping turtle near the right bottom corner; head peeks out once in a while.
+float turtleCov(vec2 fp, float t, float x0){
+    vec2  p = fp - vec2(x0, 0.030);
+    float shell = (1.0 - smoothstep(0.85, 1.05, length(vec2(p.x / 0.055, p.y / 0.032)))) * step(-0.028, p.y);
+    float peek = smoothstep(0.86, 0.93, sin(t * 0.26));
+    float hx = -0.055 - 0.020 * peek;
+    float head = 1.0 - smoothstep(0.85, 1.10, length(vec2((p.x - hx) / 0.016, (p.y + 0.010) / 0.011)));
+    float eye = (1.0 - smoothstep(0.0035, 0.006, length(p - vec2(hx - 0.004, -0.006)))) * peek;
+    float cov = max(shell, head * max(peek, 0.35));
+    cov *= (1.0 - 0.8 * eye);
+    return clamp(cov, 0.0, 1.0);
 }
 
 void mainImage(out vec4 fragColor, in vec2 fragCoord){
@@ -90,15 +121,17 @@ void mainImage(out vec4 fragColor, in vec2 fragCoord){
     // The background never visibly changes, shader or no shader: the signal is a
     // color delta the eye cannot see, matched here by exact distance.
     // The 8 cube corners of {0,u5}^3 map 1:1 to idle + 7 states.
+    // +2/255 offsets: below human perception even on bright wide-gamut displays,
+    // still exactly classifiable (texture returns exact 8-bit values).
     float eps  = 0.001;
-    float u5   = 5.0 / 255.0;
-    float wRun   = 1.0 - smoothstep(0.006, 0.012, distance(bg, BASE_BG + vec3(u5, 0.0, 0.0)));
-    float wWork  = 1.0 - smoothstep(0.006, 0.012, distance(bg, BASE_BG + vec3(0.0, u5, 0.0)));
-    float wDone  = 1.0 - smoothstep(0.006, 0.012, distance(bg, BASE_BG + vec3(0.0, 0.0, u5)));
-    float wAttn  = 1.0 - smoothstep(0.006, 0.012, distance(bg, BASE_BG + vec3(u5, u5, 0.0)));
-    float wDizzy = 1.0 - smoothstep(0.006, 0.012, distance(bg, BASE_BG + vec3(u5, 0.0, u5)));
-    float wSleep = 1.0 - smoothstep(0.006, 0.012, distance(bg, BASE_BG + vec3(0.0, u5, u5)));  // #283139
-    float wHelp  = 1.0 - smoothstep(0.006, 0.012, distance(bg, BASE_BG + vec3(u5, u5, u5)));   // #2D3139
+    float u2   = 2.0 / 255.0;
+    float wRun   = 1.0 - smoothstep(0.003, 0.006, distance(bg, BASE_BG + vec3(u2, 0.0, 0.0)));
+    float wWork  = 1.0 - smoothstep(0.003, 0.006, distance(bg, BASE_BG + vec3(0.0, u2, 0.0)));
+    float wDone  = 1.0 - smoothstep(0.003, 0.006, distance(bg, BASE_BG + vec3(0.0, 0.0, u2)));
+    float wAttn  = 1.0 - smoothstep(0.003, 0.006, distance(bg, BASE_BG + vec3(u2, u2, 0.0)));
+    float wDizzy = 1.0 - smoothstep(0.003, 0.006, distance(bg, BASE_BG + vec3(u2, 0.0, u2)));
+    float wSleep = 1.0 - smoothstep(0.003, 0.006, distance(bg, BASE_BG + vec3(0.0, u2, u2)));  // #282E36
+    float wHelp  = 1.0 - smoothstep(0.003, 0.006, distance(bg, BASE_BG + vec3(u2, u2, u2)));   // #2A2E36
     float wIdle = clamp(1.0 - wRun - wDone - wAttn - wWork - wDizzy - wSleep - wHelp, 0.0, 1.0);
     float wsum  = wIdle + wRun + wDone + wAttn + wWork + wDizzy + wSleep + wHelp + eps;
     wIdle /= wsum; wRun /= wsum; wDone /= wsum; wAttn /= wsum;
@@ -301,19 +334,29 @@ void mainImage(out vec4 fragColor, in vec2 fragCoord){
     vec3 fc3 = vec3(0.85, 0.62, 0.38);
     vec3 fc4 = vec3(0.68, 0.50, 0.85);
 
-    // seaweed clusters from the "substrate" (bottom edge), swaying
+    // seaweed clusters from the "substrate": ribbons + leafy bushes, varied heights/widths
     float aspect = R.x / R.y;
-    float weed = weedCov(fp, aspect*0.06, 0.16, 0.0, iTime);
-    weed = max(weed, weedCov(fp, aspect*0.085, 0.11, 1.9, iTime));
-    weed = max(weed, weedCov(fp, aspect*0.45, 0.20, 0.7, iTime));
-    weed = max(weed, weedCov(fp, aspect*0.475, 0.13, 2.8, iTime));
-    weed = max(weed, weedCov(fp, aspect*0.88, 0.15, 1.2, iTime));
-    weed = max(weed, weedCov(fp, aspect*0.91, 0.09, 3.6, iTime));
-    vec3 weedC = vec3(0.34, 0.58, 0.40);
+    float weedA = weedCov(fp, aspect*0.06,  0.22, 0.0, iTime, 0.009, 0.0);
+    weedA = max(weedA, weedCov(fp, aspect*0.085, 0.11, 1.9, iTime, 0.014, 0.0));
+    weedA = max(weedA, weedCov(fp, aspect*0.475, 0.13, 2.8, iTime, 0.007, 0.0));
+    float weedB = weedCov(fp, aspect*0.45,  0.19, 0.7, iTime, 0.013, 1.0);
+    weedB = max(weedB, weedCov(fp, aspect*0.62, 0.09, 4.1, iTime, 0.016, 1.0));
+    weedB = max(weedB, weedCov(fp, aspect*0.88, 0.15, 1.2, iTime, 0.011, 1.0));
+    vec3 weedAC = vec3(0.30, 0.52, 0.38);
+    vec3 weedBC = vec3(0.44, 0.68, 0.44);
 
-    float fishField = max(max(max(cov1, cov2), max(cov3, cov4)), weed * 0.8);
-    float fwsum = cov1 + cov2 + cov3 + cov4 + weed + 1e-4;
-    vec3  fishCol = (fc1*cov1 + fc2*cov2 + fc3*cov3 + fc4*cov4 + weedC*weed) / fwsum;
+    // crab patrols the substrate; its range ends BEFORE the turtle by construction
+    float turtleX = aspect - 0.11;
+    float crab = crabCov(fp, iTime, aspect * 0.10, turtleX - 0.16);
+    float turt = turtleCov(fp, iTime, turtleX);
+    vec3 crabC = vec3(0.88, 0.45, 0.30);
+    vec3 turtC = vec3(0.50, 0.62, 0.45);
+
+    float fishField = max(max(max(cov1, cov2), max(cov3, cov4)),
+                      max(max(weedA * 0.8, weedB * 0.85), max(crab, turt)));
+    float fwsum = cov1 + cov2 + cov3 + cov4 + weedA + weedB + crab + turt + 1e-4;
+    vec3  fishCol = (fc1*cov1 + fc2*cov2 + fc3*cov3 + fc4*cov4
+                   + weedAC*weedA + weedBC*weedB + crabC*crab + turtC*turt) / fwsum;
     float sleepFrac = wSleep / (aq + eps);
     fishCol = mix(fishCol, cSleep, sleepFrac * 0.6);                    // SLEEP: dimmer/cooler
 
