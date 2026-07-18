@@ -6,8 +6,10 @@ A living ASCII face on your [Ghostty](https://ghostty.org) terminal background t
 |---|---|---|
 | 😐 **Idle** | no signal | dim blue half-closed eyes, occasional blink, slow look-around |
 | 🤔 **Thinking** | you submit a prompt | amber round eyes, scanning pupils, bobbing **?** |
+| ⚙️ **Working** | agent runs a tool | gold narrowed eyes looking down at the "keyboard", typing jitter, running **…** |
 | 😊 **Done** | agent finishes the turn | green happy arc-eyes `^ ^`, wide smile, drifting fireflies |
 | 😮 **Needs you** | agent waits for approval | orange wide eyes, mouth **o**, pulsing **!** |
+| 😵 **Dizzy** | context compaction | purple spinner eyes `@ @` (counter-rotating), wavy mouth |
 
 The face is drawn as an ASCII-style cell grid (mini-glyphs `0` / block / dot), gently breathes and floats, and **never gets in the way of your text**: any cell that contains terminal glyphs automatically goes dark.
 
@@ -47,8 +49,11 @@ custom-shader-animation = always
 {
   "hooks": {
     "UserPromptSubmit": [{ "hooks": [{ "type": "command", "command": "bash ~/.claude/hooks/agent-face.sh run" }] }],
+    "PreToolUse":       [{ "hooks": [{ "type": "command", "command": "bash ~/.claude/hooks/agent-face.sh work" }] }],
+    "PostToolUse":      [{ "hooks": [{ "type": "command", "command": "bash ~/.claude/hooks/agent-face.sh run" }] }],
     "Stop":             [{ "hooks": [{ "type": "command", "command": "bash ~/.claude/hooks/agent-face.sh done" }] }],
     "Notification":     [{ "hooks": [{ "type": "command", "command": "bash ~/.claude/hooks/agent-face.sh attn" }] }],
+    "PreCompact":       [{ "hooks": [{ "type": "command", "command": "bash ~/.claude/hooks/agent-face.sh dizzy" }] }],
     "SessionStart":     [{ "hooks": [{ "type": "command", "command": "bash ~/.claude/hooks/agent-face.sh reset" }] }],
     "SessionEnd":       [{ "hooks": [{ "type": "command", "command": "bash ~/.claude/hooks/agent-face.sh reset" }] }]
   }
@@ -63,8 +68,10 @@ Any other agent works the same way — call `agent-face.sh run|done|attn|reset` 
 
 ```sh
 printf '\033]11;#332308\033\\'   # thinking (amber, "?")
+printf '\033]11;#0A2E33\033\\'   # working (gold, "...")
 printf '\033]11;#0A331A\033\\'   # done (green, smile)
 printf '\033]11;#33110A\033\\'   # needs you (orange, "!")
+printf '\033]11;#2E0833\033\\'   # dizzy (purple spinners)
 printf '\033]111\033\\'          # reset -> idle
 ```
 

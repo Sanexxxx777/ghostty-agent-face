@@ -26,34 +26,39 @@ void mainImage(out vec4 fragColor, in vec2 fragCoord){
     // ---------- 2. classify by channel RATIOS (branchless one-hot) ----------
     float eps  = 0.001;
     float sum  = bg.r + bg.g + bg.b + eps;
+    float rn   = bg.r / sum;              // red fraction
     float gn   = bg.g / sum;              // green fraction
     float bn   = bg.b / sum;              // blue fraction (small for RUN/ATTN, big for neutral themes)
     float rg   = bg.r / (bg.g + eps);     // red / green
     float gb   = bg.g / (bg.b + eps);     // green / blue
 
     float blueSmall = 1.0 - smoothstep(0.14, 0.24, bn);
-    float wDone = smoothstep(0.42, 0.52, gn) * smoothstep(1.15, 1.5, gb);
-    float wAttn = smoothstep(2.0, 2.6, rg) * blueSmall * (1.0 - wDone);
-    float wRun  = smoothstep(1.2, 1.4, rg) * (1.0 - smoothstep(2.0, 2.6, rg)) * blueSmall * (1.0 - wDone);
-    float wIdle = clamp(1.0 - wRun - wDone - wAttn, 0.0, 1.0);
-    float wsum  = wIdle + wRun + wDone + wAttn + eps;
-    wIdle /= wsum; wRun /= wsum; wDone /= wsum; wAttn /= wsum;
+    float wDone  = smoothstep(0.42, 0.52, gn) * smoothstep(1.15, 1.5, gb);
+    float wAttn  = smoothstep(2.0, 2.6, rg) * blueSmall * (1.0 - wDone);
+    float wRun   = smoothstep(1.2, 1.4, rg) * (1.0 - smoothstep(2.0, 2.6, rg)) * blueSmall * (1.0 - wDone);
+    float wWork  = (1.0 - smoothstep(0.09, 0.14, rn)) * smoothstep(0.36, 0.44, bn) * (1.0 - wDone); // cyan signal
+    float wDizzy = (1.0 - smoothstep(0.10, 0.15, gn)) * smoothstep(0.40, 0.46, bn);                 // purple signal
+    float wIdle = clamp(1.0 - wRun - wDone - wAttn - wWork - wDizzy, 0.0, 1.0);
+    float wsum  = wIdle + wRun + wDone + wAttn + wWork + wDizzy + eps;
+    wIdle /= wsum; wRun /= wsum; wDone /= wsum; wAttn /= wsum; wWork /= wsum; wDizzy /= wsum;
     float signalActive = 1.0 - wIdle;     // 0 in IDLE -> pass-through
 
     // ---------- 3. per-state colors & morph parameters (blended) ----------
-    vec3 cIdle = vec3(0.45, 0.55, 0.72);
-    vec3 cRun  = vec3(0.98, 0.72, 0.22);
-    vec3 cDone = vec3(0.30, 0.95, 0.52);
-    vec3 cAttn = vec3(1.00, 0.42, 0.18);
-    vec3 faceCol = wIdle*cIdle + wRun*cRun + wDone*cDone + wAttn*cAttn;
+    vec3 cIdle  = vec3(0.45, 0.55, 0.72);
+    vec3 cRun   = vec3(0.98, 0.72, 0.22);
+    vec3 cDone  = vec3(0.30, 0.95, 0.52);
+    vec3 cAttn  = vec3(1.00, 0.42, 0.18);
+    vec3 cWork  = vec3(0.95, 0.82, 0.35);
+    vec3 cDizzy = vec3(0.72, 0.45, 0.95);
+    vec3 faceCol = wIdle*cIdle + wRun*cRun + wDone*cDone + wAttn*cAttn + wWork*cWork + wDizzy*cDizzy;
 
-    float eyeAsp   = wIdle*0.42 + wRun*0.95 + wDone*0.80 + wAttn*1.10; // vertical roundness
+    float eyeAsp   = wIdle*0.42 + wRun*0.95 + wDone*0.80 + wAttn*1.10 + wWork*0.30 + wDizzy*0.95;
     float arcAmt   = wDone;                                            // eyes -> "^" arcs
     float oAmt     = wAttn;                                            // mouth -> "o"
     float smile    = wDone*0.11;                                       // smile depth
-    float mouthW   = wIdle*0.13 + wRun*0.15 + wDone*0.30 + wAttn*0.10;
-    float pupilAmt = wRun*0.9 + wAttn*0.7 + wIdle*0.35;
-    float faceAmp  = wIdle*0.55 + wRun*0.90 + wDone*1.00 + wAttn*1.00;
+    float mouthW   = wIdle*0.13 + wRun*0.15 + wDone*0.30 + wAttn*0.10 + wWork*0.10 + wDizzy*0.20;
+    float pupilAmt = wRun*0.9 + wAttn*0.7 + wIdle*0.35 + wWork*0.85;
+    float faceAmp  = wIdle*0.55 + wRun*0.90 + wDone*1.00 + wAttn*1.00 + wWork*0.85 + wDizzy*1.00;
 
     // blink (mostly IDLE), Gaussian dip, ~5.5s cycle -> no pow() with negative base
     float bt = fract(iTime * 0.18);
@@ -66,7 +71,8 @@ void mainImage(out vec4 fragColor, in vec2 fragCoord){
     vec2  flo     = vec2(sin(iTime*0.50)*0.03, sin(iTime*0.37 + 1.3)*0.02);
     float pulse   = 1.0 + wRun*0.05*sin(iTime*3.0);
     vec2  scan    = vec2(sin(iTime*1.7)*0.03, cos(iTime*1.3)*0.015) * (wRun + wAttn*0.3)
-                  + vec2(sin(iTime*0.23), 0.4*sin(iTime*0.31)) * 0.03 * wIdle;  // idle: slow look-around
+                  + vec2(sin(iTime*0.23), 0.4*sin(iTime*0.31)) * 0.03 * wIdle   // idle: slow look-around
+                  + vec2(0.3*sin(iTime*6.0), -0.5) * 0.03 * wWork;              // work: eyes down, typing jitter
 
     // ---------- 4. ASCII cell grid; evaluate face at CELL CENTER (blocky) ----------
     float cellH = R.y / 72.0;
@@ -108,6 +114,18 @@ void mainImage(out vec4 fragColor, in vec2 fragCoord){
     float arcR = (1.0 - smoothstep(0.015, 0.045, abs(pR.y - arcYR))) * (1.0 - smoothstep(0.95, 1.05, abs(lxR)));
     float eyeRv = mix(discR, arcR, arcAmt);
 
+    // DIZZY: spinner eyes (ring with a rotating gap) replace normal eyes
+    float srL = length(pL) / (eyeW * 0.9);
+    float saL = atan(pL.y, pL.x);
+    float gapL = step(0.5, abs(mod(saL - iTime*2.5 + 3.14159, 6.28318) - 3.14159));
+    float spinL = (1.0 - smoothstep(0.85, 1.05, srL)) * smoothstep(0.55, 0.75, srL) * gapL;
+    float srR = length(pR) / (eyeW * 0.9);
+    float saR = atan(pR.y, pR.x);
+    float gapR = step(0.5, abs(mod(saR + iTime*2.5 + 3.14159, 6.28318) - 3.14159));
+    float spinR = (1.0 - smoothstep(0.85, 1.05, srR)) * smoothstep(0.55, 0.75, srR) * gapR;
+    eyeLv = mix(eyeLv, spinL, wDizzy);
+    eyeRv = mix(eyeRv, spinR, wDizzy);
+
     // --- mouth: smile stroke <-> "o" ring ---
     vec2 pM = n - vec2(0.0, -0.19);
     float lxM = pM.x / mouthW;
@@ -116,6 +134,11 @@ void mainImage(out vec4 fragColor, in vec2 fragCoord){
     float md = length(pM);
     float oRing = (1.0 - smoothstep(0.05, 0.065, md)) * smoothstep(0.025, 0.04, md);
     float mouthV = mix(smileStroke, oRing, oAmt);
+
+    // DIZZY: wavy mouth
+    float wavyY = 0.025 * sin(lxM * 4.0 + iTime * 2.0);
+    float wavy = (1.0 - smoothstep(0.015, 0.045, abs(pM.y - wavyY))) * (1.0 - smoothstep(0.95, 1.05, abs(lxM)));
+    mouthV = mix(mouthV, wavy, wDizzy);
 
     // --- "?" beside face (RUN only), gently bobbing ---
     vec2 qp = (n - vec2(0.47, 0.12 + 0.03*sin(iTime*2.0))) / 0.16;
@@ -133,7 +156,13 @@ void mainImage(out vec4 fragColor, in vec2 fragCoord){
     float xdot = 1.0 - smoothstep(0.10, 0.16, length(xp - vec2(0.0, -0.55)));
     float xv = max(xbar, xdot) * wAttn * (0.75 + 0.25*sin(iTime*5.0));
 
-    float field = max(max(eyeLv, eyeRv), max(mouthV, max(qv, xv)));
+    // --- "..." beside face (WORK only), dots pulsing in sequence ---
+    float dots = (1.0 - smoothstep(0.030, 0.050, length(n - vec2(0.40, -0.02)))) * (0.35 + 0.65*max(0.0, sin(iTime*3.0)));
+    dots = max(dots, (1.0 - smoothstep(0.030, 0.050, length(n - vec2(0.50, -0.02)))) * (0.35 + 0.65*max(0.0, sin(iTime*3.0 - 1.1))));
+    dots = max(dots, (1.0 - smoothstep(0.030, 0.050, length(n - vec2(0.60, -0.02)))) * (0.35 + 0.65*max(0.0, sin(iTime*3.0 - 2.2))));
+    dots *= wWork;
+
+    float field = max(max(eyeLv, eyeRv), max(mouthV, max(qv, max(xv, dots))));
     field = clamp(field, 0.0, 1.0);
 
     // ---------- 5. mini-glyph inside the actual pixel's cell ----------

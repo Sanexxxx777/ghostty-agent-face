@@ -1,6 +1,6 @@
 #!/bin/bash
 # agent-face.sh — сигнал статуса агента терминалу Ghostty через фон (OSC 11)
-# Состояния: run|done|attn|reset
+# Состояния: run|done|attn|work|dizzy|reset
 # Хук-процесс без controlling tty — tty ищем подъёмом по цепочке родителей.
 
 # Пауза до установки шейдера-перекрасчика (иначе фон видимо мигает).
@@ -10,6 +10,8 @@
 COLOR_RUN="#332308"
 COLOR_DONE="#0A331A"
 COLOR_ATTN="#33110A"
+COLOR_WORK="#0A2E33"
+COLOR_DIZZY="#2E0833"
 
 find_tty() {
     local pid="$1"
@@ -34,6 +36,8 @@ case "$1" in
     run)   color="$COLOR_RUN" ;;
     done)  color="$COLOR_DONE" ;;
     attn)  color="$COLOR_ATTN" ;;
+    work)  color="$COLOR_WORK" ;;
+    dizzy) color="$COLOR_DIZZY" ;;
     reset) color="" ;;
     *) exit 0 ;;
 esac
