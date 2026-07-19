@@ -9,15 +9,15 @@
 # Включить обратно: удалить файл ~/.claude/hooks/agent-face.disabled
 [ -e "$HOME/.claude/hooks/agent-face.disabled" ] && exit 0
 
-# Сигналы = НЕВИДИМЫЕ сдвиги +2/255 от фона темы #282c34 (40,44,52).
+# Сигналы = НЕВИДИМЫЕ сдвиги +3/255 от фона темы #282c34 (40,44,52).
 # Ниже порога восприятия даже на ярких wide-gamut дисплеях; шейдер матчит точно.
-COLOR_RUN="#2A2C34"
-COLOR_DONE="#282C36"
-COLOR_ATTN="#2A2E34"
-COLOR_WORK="#282E34"
-COLOR_DIZZY="#2A2C36"
-COLOR_SLEEP="#282E36"
-COLOR_HELPERS="#2A2E36"
+COLOR_RUN="#2B2C34"
+COLOR_DONE="#282C37"
+COLOR_ATTN="#2B2F34"
+COLOR_WORK="#282F34"
+COLOR_DIZZY="#2B2C37"
+COLOR_SLEEP="#282F37"
+COLOR_HELPERS="#2B2F37"
 
 # Возвращает пару "tty pid" — pid предка, на котором tty был найден
 # (нужен сторожу как ANCHOR_PID для краш-детекта).

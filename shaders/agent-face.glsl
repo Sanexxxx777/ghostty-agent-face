@@ -124,14 +124,17 @@ void mainImage(out vec4 fragColor, in vec2 fragCoord){
     // +2/255 offsets: below human perception even on bright wide-gamut displays,
     // still exactly classifiable (texture returns exact 8-bit values).
     float eps  = 0.001;
-    float u2   = 2.0 / 255.0;
-    float wRun   = 1.0 - smoothstep(0.003, 0.006, distance(bg, BASE_BG + vec3(u2, 0.0, 0.0)));
-    float wWork  = 1.0 - smoothstep(0.003, 0.006, distance(bg, BASE_BG + vec3(0.0, u2, 0.0)));
-    float wDone  = 1.0 - smoothstep(0.003, 0.006, distance(bg, BASE_BG + vec3(0.0, 0.0, u2)));
-    float wAttn  = 1.0 - smoothstep(0.003, 0.006, distance(bg, BASE_BG + vec3(u2, u2, 0.0)));
-    float wDizzy = 1.0 - smoothstep(0.003, 0.006, distance(bg, BASE_BG + vec3(u2, 0.0, u2)));
-    float wSleep = 1.0 - smoothstep(0.003, 0.006, distance(bg, BASE_BG + vec3(0.0, u2, u2)));  // #282E36
-    float wHelp  = 1.0 - smoothstep(0.003, 0.006, distance(bg, BASE_BG + vec3(u2, u2, u2)));   // #2A2E36
+    // Signals are +3/255 offsets from the theme background. Display profiles shift the
+    // rendered bytes by up to ~1.5/255, so the window is tolerant: full inside ~0.8,
+    // off by 2.5 (still below the 3/255 spacing between neighbouring signals).
+    float u3   = 3.0 / 255.0;
+    float wRun   = 1.0 - smoothstep(0.003, 0.010, distance(bg, BASE_BG + vec3(u3, 0.0, 0.0)));
+    float wWork  = 1.0 - smoothstep(0.003, 0.010, distance(bg, BASE_BG + vec3(0.0, u3, 0.0)));
+    float wDone  = 1.0 - smoothstep(0.003, 0.010, distance(bg, BASE_BG + vec3(0.0, 0.0, u3)));
+    float wAttn  = 1.0 - smoothstep(0.003, 0.010, distance(bg, BASE_BG + vec3(u3, u3, 0.0)));
+    float wDizzy = 1.0 - smoothstep(0.003, 0.010, distance(bg, BASE_BG + vec3(u3, 0.0, u3)));
+    float wSleep = 1.0 - smoothstep(0.003, 0.010, distance(bg, BASE_BG + vec3(0.0, u3, u3)));
+    float wHelp  = 1.0 - smoothstep(0.003, 0.010, distance(bg, BASE_BG + vec3(u3, u3, u3)));
     float wIdle = clamp(1.0 - wRun - wDone - wAttn - wWork - wDizzy - wSleep - wHelp, 0.0, 1.0);
     float wsum  = wIdle + wRun + wDone + wAttn + wWork + wDizzy + wSleep + wHelp + eps;
     wIdle /= wsum; wRun /= wsum; wDone /= wsum; wAttn /= wsum;
@@ -322,11 +325,13 @@ void mainImage(out vec4 fragColor, in vec2 fragCoord){
     vec2  curFp = vec2(iCurrentCursor.x, R.y - iCurrentCursor.y) / R.y; // cursor in the same space
     float tN = iTime;          // near fish
     float tF = iTime * 0.6;    // far fish (slower)
-    // centers kept to the LEFT/LOWER area so they never fight the face (upper-right).
-    float cov1 = fishCov(fp, vec2(0.42, 0.28), vec4(0.14,0.05,0.07,0.03), vec4(0.31,0.73,0.41,0.97), vec4(0.0,1.7,2.3,0.9), tF, 0.045, 0.018, 0.0, curFp) * 0.5; // far
-    float cov2 = fishCov(fp, vec2(0.72, 0.19), vec4(0.12,0.06,0.06,0.04), vec4(0.27,0.61,0.47,0.89), vec4(1.1,2.4,0.5,3.0), tF, 0.045, 0.018, 1.5, curFp) * 0.5; // far
-    float cov3 = fishCov(fp, vec2(0.52, 0.42), vec4(0.16,0.05,0.08,0.03), vec4(0.23,0.67,0.37,0.83), vec4(0.6,2.9,1.4,2.1), tN, 0.070, 0.028, 0.7, curFp);       // near
-    float cov4 = fishCov(fp, vec2(0.30, 0.52), vec4(0.14,0.06,0.07,0.04), vec4(0.29,0.59,0.43,0.79), vec4(2.2,0.4,3.1,1.2), tN, 0.062, 0.025, 2.6, curFp);       // near
+    float aspect = R.x / R.y;
+    // fish roam the WHOLE window (centers spread across the width, x-amps scale with it);
+    // they cruise the mid-water: above the weeds/crab, below the face zone.
+    float cov1 = fishCov(fp, vec2(aspect*0.22, 0.42), vec4(aspect*0.075,aspect*0.028,0.055,0.022), vec4(0.31,0.73,0.41,0.97), vec4(0.0,1.7,2.3,0.9), tF, 0.045, 0.018, 0.0, curFp) * 0.5; // far
+    float cov2 = fishCov(fp, vec2(aspect*0.60, 0.50), vec4(aspect*0.070,aspect*0.030,0.050,0.020), vec4(0.27,0.61,0.47,0.89), vec4(1.1,2.4,0.5,3.0), tF, 0.045, 0.018, 1.5, curFp) * 0.5; // far
+    float cov3 = fishCov(fp, vec2(aspect*0.38, 0.38), vec4(aspect*0.085,aspect*0.030,0.070,0.028), vec4(0.23,0.67,0.37,0.83), vec4(0.6,2.9,1.4,2.1), tN, 0.070, 0.028, 0.7, curFp);       // near
+    float cov4 = fishCov(fp, vec2(aspect*0.72, 0.30), vec4(aspect*0.080,aspect*0.032,0.065,0.025), vec4(0.29,0.59,0.43,0.79), vec4(2.2,0.4,3.1,1.2), tN, 0.062, 0.025, 2.6, curFp);       // near
 
     // fish in distinct hues: blue, teal, warm sand, violet
     vec3 fc1 = vec3(0.42, 0.55, 0.85);
@@ -335,7 +340,6 @@ void mainImage(out vec4 fragColor, in vec2 fragCoord){
     vec3 fc4 = vec3(0.68, 0.50, 0.85);
 
     // seaweed clusters from the "substrate": ribbons + leafy bushes, varied heights/widths
-    float aspect = R.x / R.y;
     float weedA = weedCov(fp, aspect*0.06,  0.22, 0.0, iTime, 0.009, 0.0);
     weedA = max(weedA, weedCov(fp, aspect*0.085, 0.11, 1.9, iTime, 0.014, 0.0));
     weedA = max(weedA, weedCov(fp, aspect*0.475, 0.13, 2.8, iTime, 0.007, 0.0));
