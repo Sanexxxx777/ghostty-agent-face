@@ -115,3 +115,18 @@ Signal colors live at the top of `agent-face.sh` and in the classifier threshold
 Mechanism (OSC 11 as a hook→shader IPC channel) popularized by [astra-glow](https://github.com/Astralune-ai/astra-glow); this project is an independent implementation with its own renderer.
 
 MIT license.
+
+## Contact
+
+[@Aleksandr_NFA](https://github.com/Sanexxxx777) — issues and PRs welcome.
+
+---
+
+## На русском (кратко)
+
+Живая ASCII-мордочка на фоне терминала [Ghostty](https://ghostty.org), показывающая статус
+ИИ-агента (думает / работает / готово / нужна помощь и т.д.) — без токенов, без демонов, без
+поллинга. Сигнальный слой пишет невидимый OSC 11 цвет фона через хуки жизненного цикла агента
+(`hooks/agent-face.sh`), рендер-слой — кастомный GLSL-шейдер Ghostty (`shaders/agent-face.glsl`),
+который считывает этот цвет и рисует мордочку поверх фона, не меняя видимый цвет темы. Требует
+Ghostty ≥ 1.2 (macOS). Установка — см. раздел Install выше.
